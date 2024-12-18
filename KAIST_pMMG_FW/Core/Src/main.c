@@ -34,25 +34,25 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 typedef struct _pMMG_pressure_t {
-	double pMMG1_press;
-	double pMMG2_press;
-	double pMMG3_press;
-	double pMMG4_press;
-	double pMMG5_press;
-	double pMMG6_press;
-	double pMMG7_press;
-	double pMMG8_press;
+	float pMMG1_press;
+	float pMMG2_press;
+	float pMMG3_press;
+	float pMMG4_press;
+	float pMMG5_press;
+	float pMMG6_press;
+	float pMMG7_press;
+	float pMMG8_press;
 } pMMG_pressure_t;
 
 typedef struct _pMMG_temperature_t {
-	double pMMG1_temp;
-	double pMMG2_temp;
-	double pMMG3_temp;
-	double pMMG4_temp;
-	double pMMG5_temp;
-	double pMMG6_temp;
-	double pMMG7_temp;
-	double pMMG8_temp;
+	float pMMG1_temp;
+	float pMMG2_temp;
+	float pMMG3_temp;
+	float pMMG4_temp;
+	float pMMG5_temp;
+	float pMMG6_temp;
+	float pMMG7_temp;
+	float pMMG8_temp;
 } pMMG_temperature_t;
 
 typedef struct _pMMG_err_t {
@@ -125,8 +125,15 @@ float codeTime = 0;			// usec
 
 float totalCodeTime = 0; 	// sec
 
-char txBuffer[200];
+
+//char txBuffer[200];                     // 첫 번째 버퍼
+static char txBufferA[200];
+static char txBufferB[200];
+static char *currentTxBuffer = txBufferA;
+static char *nextTxBuffer = txBufferB;
 volatile uint8_t uartReady = 1; // DMA 송신 완료 상태를 나타내는 flag
+volatile uint32_t elapsedTime_ms = 0; // 누적 시간
+volatile uint32_t uartnotreadystack = 0;
 
 /* USER CODE END PV */
 
@@ -275,96 +282,110 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim3) {
-		DWT->CYCCNT = 0;
-		start = DWT->CYCCNT / 170;
+//		DWT->CYCCNT = 0;
+//		start = DWT->CYCCNT / 170;
 
+		elapsedTime_ms += 5; // 타이머 주기: 5000us
 
 		/* (4) 8-pMMG measurement with Extended G474RE Board by 3-phases [ 4.22ms = (1.220ms + 3*70us)*2 + (1.220ms + 2*70us) ] */
 		pMMG_Update_multiple_3(&pMMGObj1, &pMMGObj4, &pMMGObj7);
 		pMMG_Update_multiple_3(&pMMGObj2, &pMMGObj5, &pMMGObj8);
 		pMMG_Update_multiple_2(&pMMGObj3, &pMMGObj6);
 
-		// Mapping //
-		totalpMMG.pMMG_press.pMMG1_press = pMMGObj1.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG2_press = pMMGObj2.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG3_press = pMMGObj3.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG4_press = pMMGObj4.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG5_press = pMMGObj5.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG6_press = pMMGObj6.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG7_press = pMMGObj7.pMMGData.pressureKPa;
-		totalpMMG.pMMG_press.pMMG8_press = pMMGObj8.pMMGData.pressureKPa;
-
-		totalpMMG.pMMG_temp.pMMG1_temp = pMMGObj1.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG2_temp = pMMGObj2.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG3_temp = pMMGObj3.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG4_temp = pMMGObj4.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG5_temp = pMMGObj5.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG6_temp = pMMGObj6.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG7_temp = pMMGObj7.pMMGData.temperatureC;
-		totalpMMG.pMMG_temp.pMMG8_temp = pMMGObj8.pMMGData.temperatureC;
-		///////////////////////////////////////////////////////////////////////////////
-
-
-
-		if (pMMGObj1.pMMGData.pressureKPa > 150 || pMMGObj1.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err1++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj2.pMMGData.pressureKPa > 150 || pMMGObj2.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err2++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj3.pMMGData.pressureKPa > 150 || pMMGObj3.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err3++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj4.pMMGData.pressureKPa > 150 || pMMGObj4.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err4++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj5.pMMGData.pressureKPa > 150 || pMMGObj5.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err5++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj6.pMMGData.pressureKPa > 150 || pMMGObj6.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err6++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj7.pMMGData.pressureKPa > 150 || pMMGObj7.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err7++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
-		if (pMMGObj8.pMMGData.pressureKPa > 150 || pMMGObj8.pMMGData.pressureKPa < 90) {
-			totalpMMG.pMMG_err.err8++;
-			totalpMMG.pMMG_err.totalErr++;
-		}
+//		// Mapping //
+//		totalpMMG.pMMG_press.pMMG1_press = pMMGObj1.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG2_press = pMMGObj2.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG3_press = pMMGObj3.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG4_press = pMMGObj4.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG5_press = pMMGObj5.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG6_press = pMMGObj6.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG7_press = pMMGObj7.pMMGData.pressureKPa;
+//		totalpMMG.pMMG_press.pMMG8_press = pMMGObj8.pMMGData.pressureKPa;
+//
+//		totalpMMG.pMMG_temp.pMMG1_temp = pMMGObj1.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG2_temp = pMMGObj2.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG3_temp = pMMGObj3.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG4_temp = pMMGObj4.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG5_temp = pMMGObj5.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG6_temp = pMMGObj6.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG7_temp = pMMGObj7.pMMGData.temperatureC;
+//		totalpMMG.pMMG_temp.pMMG8_temp = pMMGObj8.pMMGData.temperatureC;
+//		///////////////////////////////////////////////////////////////////////////////
+//
+//
+//		if (pMMGObj1.pMMGData.pressureKPa > 150 || pMMGObj1.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err1++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj2.pMMGData.pressureKPa > 150 || pMMGObj2.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err2++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj3.pMMGData.pressureKPa > 150 || pMMGObj3.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err3++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj4.pMMGData.pressureKPa > 150 || pMMGObj4.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err4++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj5.pMMGData.pressureKPa > 150 || pMMGObj5.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err5++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj6.pMMGData.pressureKPa > 150 || pMMGObj6.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err6++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj7.pMMGData.pressureKPa > 150 || pMMGObj7.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err7++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
+//		if (pMMGObj8.pMMGData.pressureKPa > 150 || pMMGObj8.pMMGData.pressureKPa < 90) {
+//			totalpMMG.pMMG_err.err8++;
+//			totalpMMG.pMMG_err.totalErr++;
+//		}
 
 
 		/* Check FSR values */
 		FSR_L = FSRvalue[0];
 		FSR_R = FSRvalue[1];
 
+		uint16_t pressure1 = (uint16_t)(pMMGObj1.pMMGData.pressureKPa * 100);
+		uint16_t pressure2 = (uint16_t)(pMMGObj2.pMMGData.pressureKPa * 100);
+		uint16_t pressure3 = (uint16_t)(pMMGObj3.pMMGData.pressureKPa * 100);
+		uint16_t pressure4 = (uint16_t)(pMMGObj4.pMMGData.pressureKPa * 100);
+		uint16_t pressure5 = (uint16_t)(pMMGObj5.pMMGData.pressureKPa * 100);
+		uint16_t pressure6 = (uint16_t)(pMMGObj6.pMMGData.pressureKPa * 100);
+		uint16_t pressure7 = (uint16_t)(pMMGObj7.pMMGData.pressureKPa * 100);
+		uint16_t pressure8 = (uint16_t)(pMMGObj8.pMMGData.pressureKPa * 100);
+
 		// UART DMA transmit
-		// Check if previous transmit ended
+		int len = snprintf(nextTxBuffer, 200,
+						   "%lu,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\r\n",
+						   elapsedTime_ms,
+						   pressure1, pressure2, pressure3, pressure4,
+						   pressure5, pressure6, pressure7, pressure8,
+						   FSR_L, FSR_R);
+
 		if (uartReady == 1) {
-			// Data format
-			int len = snprintf(txBuffer, sizeof(txBuffer),
-			   "%lu,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%u,%u\r\n",
-			   (uint32_t)codeTime,
-			   totalpMMG.pMMG_press.pMMG1_press, totalpMMG.pMMG_press.pMMG2_press,
-			   totalpMMG.pMMG_press.pMMG3_press, totalpMMG.pMMG_press.pMMG4_press,
-			   totalpMMG.pMMG_press.pMMG5_press, totalpMMG.pMMG_press.pMMG6_press,
-			   totalpMMG.pMMG_press.pMMG7_press, totalpMMG.pMMG_press.pMMG8_press,
-			   FSR_L, FSR_R);
+			// 버퍼 스왑: nextTxBuffer -> currentTxBuffer로 전송,
+			// currentTxBuffer -> nextTxBuffer로 준비
+			char *temp = currentTxBuffer;
+			currentTxBuffer = nextTxBuffer;
+			nextTxBuffer = temp;
 
 			// DMA start
-			if (HAL_UART_Transmit_DMA(&hlpuart1, (uint8_t*)txBuffer, len) == HAL_OK) {
+			if (HAL_UART_Transmit_DMA(&hlpuart1, (uint8_t*)currentTxBuffer, len) == HAL_OK) {
 				uartReady = 0; // transmitting
 			}
 		}
+		else {
+			uartnotreadystack += 1;
+		}
 
-		codeTime = DWT->CYCCNT / 170 - start;
-		totalCodeTime += (float)codeTime / 1000000;
+//		codeTime = DWT->CYCCNT / 170 - start;
+//		totalCodeTime += (float)codeTime / 1000000;
 
 	}
 }
