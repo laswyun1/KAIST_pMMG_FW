@@ -28,6 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "pMMG.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -124,6 +125,9 @@ float codeTime = 0;			// usec
 
 float totalCodeTime = 0; 	// sec
 
+char txBuffer[200];
+volatile uint8_t uartReady = 1; // DMA 송신 완료 상태를 나타내는 flag
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -143,6 +147,7 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -300,9 +305,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		///////////////////////////////////////////////////////////////////////////////
 
 
-		codeTime = DWT->CYCCNT / 170 - start;
-		totalCodeTime += (float)codeTime / 1000000;
-
 
 		if (pMMGObj1.pMMGData.pressureKPa > 150 || pMMGObj1.pMMGData.pressureKPa < 90) {
 			totalpMMG.pMMG_err.err1++;
@@ -341,7 +343,38 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		/* Check FSR values */
 		FSR_L = FSRvalue[0];
 		FSR_R = FSRvalue[1];
+
+		// UART DMA transmit
+		// Check if previous transmit ended
+		if (uartReady == 1) {
+			// Data format
+			int len = snprintf(txBuffer, sizeof(txBuffer),
+			   "%lu,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%u,%u\r\n",
+			   (uint32_t)codeTime,
+			   totalpMMG.pMMG_press.pMMG1_press, totalpMMG.pMMG_press.pMMG2_press,
+			   totalpMMG.pMMG_press.pMMG3_press, totalpMMG.pMMG_press.pMMG4_press,
+			   totalpMMG.pMMG_press.pMMG5_press, totalpMMG.pMMG_press.pMMG6_press,
+			   totalpMMG.pMMG_press.pMMG7_press, totalpMMG.pMMG_press.pMMG8_press,
+			   FSR_L, FSR_R);
+
+			// DMA start
+			if (HAL_UART_Transmit_DMA(&hlpuart1, (uint8_t*)txBuffer, len) == HAL_OK) {
+				uartReady = 0; // transmitting
+			}
+		}
+
+		codeTime = DWT->CYCCNT / 170 - start;
+		totalCodeTime += (float)codeTime / 1000000;
+
 	}
+}
+
+// UART DMA success callback
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart == &hlpuart1) {
+        uartReady = 1; // transmit success flag
+    }
 }
 /* USER CODE END 4 */
 
