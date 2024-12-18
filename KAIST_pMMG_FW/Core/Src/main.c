@@ -122,10 +122,9 @@ uint16_t FSR_R = 0;				// 1: PA1
 
 float start = 0;
 float codeTime = 0;			// usec
-
 float totalCodeTime = 0; 	// sec
 
-
+/* UART */
 //char txBuffer[200];                     // 첫 번째 버퍼
 static char txBufferA[200];
 static char txBufferB[200];
@@ -134,6 +133,10 @@ static char *nextTxBuffer = txBufferB;
 volatile uint8_t uartReady = 1; // DMA 송신 완료 상태를 나타내는 flag
 volatile uint32_t elapsedTime_ms = 0; // 누적 시간
 volatile uint32_t uartnotreadystack = 0;
+
+/* Button */
+volatile uint8_t buttonPressed = 0;  // 버튼이 눌렸는지 여부
+volatile uint8_t systemRunning = 0;  // 센서 및 UART 송신 상태 (0: 정지, 1: 실행)
 
 /* USER CODE END PV */
 
@@ -217,7 +220,7 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)FSRvalue, 2);
 
   /* If you use Timer Interrupt */
-  HAL_TIM_Base_Start_IT(&htim3);
+//  HAL_TIM_Base_Start_IT(&htim3);
 
   /* USER CODE END 2 */
 
@@ -225,7 +228,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // 버튼 눌림 상태 확인
+	  if (buttonPressed)
+	  {
+		  buttonPressed = 0; // 버튼 플래그 초기화
+		  systemRunning = !systemRunning; // 상태 토글
 
+		  if (systemRunning)
+		  {
+			  HAL_TIM_Base_Start_IT(&htim3); // 타이머 시작
+		  }
+		  else
+		  {
+			  HAL_TIM_Base_Stop_IT(&htim3); // 타이머 정지
+		  }
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -397,6 +414,23 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
         uartReady = 1; // transmit success flag
     }
 }
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == B1_Pin) // PC13 버튼 핀
+    {
+    	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin); // LED 토글로 디버깅
+        static uint32_t lastTick = 0; // 마지막 버튼 시간
+        uint32_t currentTick = HAL_GetTick(); // 현재 시스템 시간
+
+        if ((currentTick - lastTick) > 50) // 50ms 디바운싱 시간
+        {
+            lastTick = currentTick; // 마지막 눌림 시간 갱신
+            buttonPressed = 1;      // 버튼 눌림 플래그 설정
+        }
+    }
+}
+
 /* USER CODE END 4 */
 
 /**
