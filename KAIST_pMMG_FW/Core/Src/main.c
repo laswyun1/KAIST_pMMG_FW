@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "pMMG.h"
 #include <stdio.h>
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -125,9 +126,9 @@ float codeTime = 0;			// usec
 float totalCodeTime = 0; 	// sec
 
 /* UART */
-//char txBuffer[200];                     // 첫 번째 버퍼
-static char txBufferA[200];
-static char txBufferB[200];
+#define BUFFERSIZE 100
+static char txBufferA[BUFFERSIZE];
+static char txBufferB[BUFFERSIZE];
 static char *currentTxBuffer = txBufferA;
 static char *nextTxBuffer = txBufferB;
 volatile uint8_t uartReady = 1; // DMA 송신 완료 상태를 나타내는 flag
@@ -137,6 +138,9 @@ volatile uint32_t uartnotreadystack = 0;
 /* Button */
 volatile uint8_t buttonPressed = 0;  // 버튼이 눌렸는지 여부
 volatile uint8_t systemRunning = 0;  // 센서 및 UART 송신 상태 (0: 정지, 1: 실행)
+volatile uint32_t last_button_press_time = 0; // 디바운싱을 위한 마지막 버튼 누른 시간
+uint8_t buttoncount = 0;
+uint8_t pinState = 0;
 
 /* USER CODE END PV */
 
@@ -220,7 +224,8 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)FSRvalue, 2);
 
   /* If you use Timer Interrupt */
-//  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim3);
+  systemRunning = 1;
 
   /* USER CODE END 2 */
 
@@ -228,24 +233,28 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  // 버튼 눌림 상태 확인
-	  if (buttonPressed)
-	  {
-		  buttonPressed = 0; // 버튼 플래그 초기화
-		  systemRunning = !systemRunning; // 상태 토글
-
-		  if (systemRunning)
-		  {
-			  HAL_TIM_Base_Start_IT(&htim3); // 타이머 시작
-		  }
-		  else
-		  {
-			  HAL_TIM_Base_Stop_IT(&htim3); // 타이머 정지
-		  }
-	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+//	   메인 루프에서 버튼이 눌렸는지 확인하고, 필요한 경우 상태를 토글합니다.
+	  if (buttonPressed) {
+		  buttonPressed = 0; // 플래그 초기화
+
+		  // systemRunning 상태 토글
+		 systemRunning = !systemRunning; // 시스템 상태 토글
+
+		 // 상태에 따라 LED를 켜거나 끕니다 (선택 사항)
+		 if (systemRunning) {
+			 HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET); // LED On
+			 // 타이머 시작
+			 HAL_TIM_Base_Start_IT(&htim3);
+		 }
+		 else {
+			 HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET); // LED Off
+			 // 타이머 정지
+			 HAL_TIM_Base_Stop_IT(&htim3);
+		 }
+	  }
   }
   /* USER CODE END 3 */
 }
@@ -378,7 +387,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		uint16_t pressure8 = (uint16_t)(pMMGObj8.pMMGData.pressureKPa * 100);
 
 		// UART DMA transmit
-		int len = snprintf(nextTxBuffer, 200,
+		int len = snprintf(nextTxBuffer, BUFFERSIZE,
 						   "%lu,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\r\n",
 						   elapsedTime_ms,
 						   pressure1, pressure2, pressure3, pressure4,
@@ -417,18 +426,18 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if (GPIO_Pin == B1_Pin) // PC13 버튼 핀
+  if (GPIO_Pin == B1_Pin)
+  {
+    uint32_t current_time = HAL_GetTick(); // 현재 시간 (ms)
+    buttoncount += 1;
+    // 디바운싱 시간 확인 (200ms)
+    if ((current_time - last_button_press_time) > 200)
     {
-    	HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin); // LED 토글로 디버깅
-        static uint32_t lastTick = 0; // 마지막 버튼 시간
-        uint32_t currentTick = HAL_GetTick(); // 현재 시스템 시간
-
-        if ((currentTick - lastTick) > 50) // 50ms 디바운싱 시간
-        {
-            lastTick = currentTick; // 마지막 눌림 시간 갱신
-            buttonPressed = 1;      // 버튼 눌림 플래그 설정
-        }
+      buttonPressed = 1; // 버튼이 눌렸음을 플래그
+      last_button_press_time = current_time; // 마지막 버튼 누른 시간 업데이트
     }
+    // 그렇지 않으면 무시 (디바운싱)
+  }
 }
 
 /* USER CODE END 4 */

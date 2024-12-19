@@ -178,15 +178,33 @@ void pMMG_DisableCS(pMMG_Obj_t* pMMG_Obj) {
 }
 
 
+//void us_Delay(uint32_t us_delay)
+//{
+//    /* Using float for calculation, consider pre-computing scale factor. */
+//    float start = (float)DWT->CYCCNT / 170.0f;
+//    while ( ((float)DWT->CYCCNT / 170.0f) - start < (float)us_delay )
+//    {
+//    }
+//}
+
 void us_Delay(uint32_t us_delay)
 {
-    /* Using float for calculation, consider pre-computing scale factor. */
-    float start = (float)DWT->CYCCNT / 170.0f;
-    while ( ((float)DWT->CYCCNT / 170.0f) - start < (float)us_delay )
-    {
+    // DWT와 시스템 클럭 초기화 확인
+    if (!(CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk)) {
+        CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // DWT 활성화
+    }
+    if (!(DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk)) {
+        DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk; // CYCCNT 활성화
+    }
+
+    uint32_t ticks = us_delay * (SystemCoreClock / 1000000); // 마이크로초를 클럭 주기로 변환
+    uint32_t startTick = DWT->CYCCNT;                      // 시작 시점
+
+    // 오버플로우를 고려한 딜레이 루프
+    while ((DWT->CYCCNT - startTick) < ticks) {
+        // Busy wait
     }
 }
-
 
 /* -----------------------------------------------------------------------
    Multiple pMMG in one SPI port version
