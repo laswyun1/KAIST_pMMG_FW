@@ -224,8 +224,8 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)FSRvalue, 2);
 
   /* If you use Timer Interrupt */
-  HAL_TIM_Base_Start_IT(&htim3);
-  systemRunning = 1;
+//  HAL_TIM_Base_Start_IT(&htim3);
+  systemRunning = 0;
 
   /* USER CODE END 2 */
 
@@ -430,8 +430,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
     uint32_t current_time = HAL_GetTick(); // 현재 시간 (ms)
     buttoncount += 1;
-    // 디바운싱 시간 확인 (200ms)
-    if ((current_time - last_button_press_time) > 200)
+    // 디바운싱 시간 확인
+    if ((current_time - last_button_press_time) > 50)
     {
       buttonPressed = 1; // 버튼이 눌렸음을 플래그
       last_button_press_time = current_time; // 마지막 버튼 누른 시간 업데이트
