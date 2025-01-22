@@ -129,9 +129,10 @@ uint8_t uartTxBuf[100];
 uint8_t uartBufSize = 0;
 char splitString[2] = ",";
 char newLine[2] = "\n";
-char strBuf_8bit[3];
-char strBuf_16bit[5];
-char strBuf_32bit[10];
+char strBuf_8bit[4];
+char strBuf_12bit[5];
+char strBuf_16bit[6];
+char strBuf_32bit[11];
 char uartTxBufChar[100] = "";
 
 uint32_t startTick = 0;
@@ -376,6 +377,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		float data7 = (float)totalpMMG.pMMG_press.pMMG6_press;
 		float data8 = (float)totalpMMG.pMMG_press.pMMG7_press;
 		float data9 = (float)totalpMMG.pMMG_press.pMMG8_press;
+		uint16_t data10 = FSR_L;
+		uint16_t data11 = FSR_R;
+
 
 		/* Append 1st component to sent */
 		sprintf(uartTxBufChar, "%lu", data1);
@@ -427,6 +431,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		memset(strBuf_32bit, '\0', sizeof(strBuf_32bit));
 		sprintf(strBuf_32bit, "%.2f", data9);
 		strcat(uartTxBufChar, strBuf_32bit);
+
+		/* Append 10th component to sent */
+		strcat(uartTxBufChar, splitString);
+		memset(strBuf_16bit, '\0', sizeof(strBuf_16bit));
+		sprintf(strBuf_16bit, "%u", data10);
+		strcat(uartTxBufChar, strBuf_16bit);
+
+		/* Append 11th component to sent */
+		strcat(uartTxBufChar, splitString);
+		memset(strBuf_16bit, '\0', sizeof(strBuf_16bit));
+		sprintf(strBuf_16bit, "%u", data11);
+		strcat(uartTxBufChar, strBuf_16bit);
 
 		/* Add "\n" in the end of data */
 		strcat(uartTxBufChar, newLine);
