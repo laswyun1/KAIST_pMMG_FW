@@ -143,20 +143,15 @@ float totalCodeTime = 0; 	// sec
 uint32_t interruptCnt = 0;
 uint8_t interruptPeriod = 5; 	// Change with IOC file, [ms]
 
-
-/* UART Tx FIFO */
-#define FIFO_SIZE  		3
-uint8_t uartTxFIFO[FIFO_SIZE][100];
-uint8_t uartTxFIFOsize[FIFO_SIZE];
-uint8_t uartTxFIFOcursor = 0;
-uint8_t fifoCnt = 0;
-uint8_t uartTxDone = 1;
 uint8_t uartUpdate = 0;
 
+
+
+/* For Debugging */
 uint32_t uartStart = 0;
 uint32_t uartEnd = 0;
-
 uint32_t timEnd = 0;
+
 
 
 /* For GPIO EXTI */
@@ -477,7 +472,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart == &hlpuart1) {
-		uartTxDone = 1;
 		uartEnd = (DWT->CYCCNT - uartStart) / 170;
 		uartStart = DWT->CYCCNT;
 	}
