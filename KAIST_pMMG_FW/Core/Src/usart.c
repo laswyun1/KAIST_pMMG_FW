@@ -99,12 +99,19 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PA2     ------> LPUART1_TX
     PA3     ------> LPUART1_RX
     */
-    GPIO_InitStruct.Pin = LPUART1_TX_Pin|LPUART1_RX_Pin;
+    GPIO_InitStruct.Pin = LPUART1_TX_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF12_LPUART1;
+    HAL_GPIO_Init(LPUART1_TX_GPIO_Port, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = LPUART1_RX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF12_LPUART1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(LPUART1_RX_GPIO_Port, &GPIO_InitStruct);
 
     /* LPUART1 DMA Init */
     /* LPUART1_TX Init */
@@ -116,7 +123,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     hdma_lpuart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_lpuart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_lpuart1_tx.Init.Mode = DMA_NORMAL;
-    hdma_lpuart1_tx.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_lpuart1_tx.Init.Priority = DMA_PRIORITY_LOW;
     if (HAL_DMA_Init(&hdma_lpuart1_tx) != HAL_OK)
     {
       Error_Handler();

@@ -143,6 +143,22 @@ float totalCodeTime = 0; 	// sec
 uint32_t interruptCnt = 0;
 uint8_t interruptPeriod = 5; 	// Change with IOC file, [ms]
 
+
+/* UART Tx FIFO */
+#define FIFO_SIZE  		3
+uint8_t uartTxFIFO[FIFO_SIZE][100];
+uint8_t uartTxFIFOsize[FIFO_SIZE];
+uint8_t uartTxFIFOcursor = 0;
+uint8_t fifoCnt = 0;
+uint8_t uartTxDone = 1;
+uint8_t uartUpdate = 0;
+
+uint32_t uartStart = 0;
+uint32_t uartEnd = 0;
+
+uint32_t timEnd = 0;
+
+
 /* For GPIO EXTI */
 uint8_t GPIO_EXTI_FLAG = 0;
 
@@ -225,7 +241,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  if (uartUpdate == 1) {
+		  HAL_UART_Transmit_DMA(&hlpuart1, uartTxBuf, uartBufSize);
+		  uartUpdate = 0;
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -282,9 +301,10 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim == &htim3) {
+		timEnd = (DWT->CYCCNT - startTick) / 170;
+
 		/* Time check start */
 		startTick = DWT->CYCCNT;
-
 
 		/* Get pMMG Data: 8-pMMG measurement with Extended G474RE Board by 3-phases [ 4.22ms = (1.220ms + 3*70us)*2 + (1.220ms + 2*70us) ] */
 		pMMG_Update_multiple_3(&pMMGObj1, &pMMGObj4, &pMMGObj7);
@@ -419,7 +439,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		sprintf((char*)uartTxBuf, uartTxBufChar);
 		uartBufSize = strlen(uartTxBufChar);
 
-		HAL_UART_Transmit_DMA(&hlpuart1, uartTxBuf, uartBufSize);
+		uartUpdate = 1;
+
 		/* ------------------------------------------------------------------------------------------------------------------------------- */
 
 		/* Time check end */
@@ -437,7 +458,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 }
 
 
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_13 && GPIO_EXTI_FLAG == 0) {
 		interruptCnt = 0;
@@ -453,6 +473,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		HAL_TIM_Base_Stop_IT(&htim3);
 	}
 }
+
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+	if (huart == &hlpuart1) {
+		uartTxDone = 1;
+		uartEnd = (DWT->CYCCNT - uartStart) / 170;
+		uartStart = DWT->CYCCNT;
+	}
+}
+
 /* USER CODE END 4 */
 
 /**
