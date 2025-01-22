@@ -98,23 +98,23 @@ void pMMG_ReadUncompValue(pMMG_Obj_t* pMMG_Obj) {
 	if (pressureOSR == 0x00) {				// 0.54ms
 //		HAL_Delay(1);
 //		us_Delay(1000);
-		us_Delay(610);
+		us_Delay(600);
 	}
 	else if (pressureOSR == 0x02) {			// 1.06ms
 //		HAL_Delay(2);
-		us_Delay(2000);
+		us_Delay(1200);
 	}
 	else if (pressureOSR == 0x04) {			// 2.08ms
 //		HAL_Delay(3);
-		us_Delay(3000);
+		us_Delay(2500);
 	}
 	else if (pressureOSR == 0x06) {			// 4.13ms
 //		HAL_Delay(5);
-		us_Delay(5000);
+		us_Delay(4500);
 	}
 	else {									// 8.22ms
 //		HAL_Delay(10);
-		us_Delay(10000);
+		us_Delay(9000);
 	}
 
 	pMMG_DisableCS(pMMG_Obj);
@@ -145,23 +145,23 @@ void pMMG_ReadUncompValue(pMMG_Obj_t* pMMG_Obj) {
 	if (temperatureOSR == 0x00) {			// 0.54ms
 //		HAL_Delay(1);
 //		us_Delay(1000);
-		us_Delay(610);
+		us_Delay(600);
 	}
 	else if (temperatureOSR == 0x02) {		// 1.06ms
 //		HAL_Delay(2);
-		us_Delay(2000);
+		us_Delay(1200);
 	}
 	else if (temperatureOSR == 0x04) {		// 2.08ms
 //		HAL_Delay(3);
-		us_Delay(3000);
+		us_Delay(2500);
 	}
 	else if (temperatureOSR == 0x06) {		// 4.13ms
 //		HAL_Delay(5);
-		us_Delay(5000);
+		us_Delay(4500);
 	}
 	else {									// 8.22ms
 //		HAL_Delay(10);
-		us_Delay(10000);
+		us_Delay(9000);
 	}
 
 	pMMG_DisableCS(pMMG_Obj);
@@ -240,12 +240,25 @@ void pMMG_DisableCS(pMMG_Obj_t* pMMG_Obj) {
 
 void us_Delay(uint32_t us_delay)
 {
-    float usStart = (float)DWT->CYCCNT / 170;
-    while ( (float)DWT->CYCCNT/170 - usStart < (float)us_delay)
-    {
-    }
-}
+	uint32_t tickStart = DWT->CYCCNT;
+	uint32_t tickDelay = us_delay * sysMHz;
 
+	if (tickStart > 4294967295 - (us_delay * sysMHz)) {
+		uint32_t elapsed = 4294967295 - tickStart;
+		uint32_t remainder = tickDelay - elapsed;
+		while ( DWT->CYCCNT >= tickStart && DWT->CYCCNT <= 4294967295 )
+		{
+		}
+		while ( DWT->CYCCNT <= remainder)
+		{
+		}
+	}
+	else {
+	    while ( DWT->CYCCNT - tickStart <= tickDelay )
+	    {
+	    }
+	}
+}
 
 
 
@@ -281,23 +294,23 @@ void pMMG_ReadUncompValue_multiple_3(pMMG_Obj_t* pMMG_Obj1, pMMG_Obj_t* pMMG_Obj
 	if (pressureOSR == 0x00) {				// 0.54ms
 //		HAL_Delay(1);
 //		us_Delay(1000);
-		us_Delay(610);
+		us_Delay(600);
 	}
 	else if (pressureOSR == 0x02) {			// 1.06ms
 //		HAL_Delay(2);
-		us_Delay(2000);
+		us_Delay(1200);
 	}
 	else if (pressureOSR == 0x04) {			// 2.08ms
 //		HAL_Delay(3);
-		us_Delay(3000);
+		us_Delay(2500);
 	}
 	else if (pressureOSR == 0x06) {			// 4.13ms
 //		HAL_Delay(5);
-		us_Delay(5000);
+		us_Delay(4500);
 	}
 	else {									// 8.22ms
 //		HAL_Delay(10);
-		us_Delay(10000);
+		us_Delay(9000);
 	}
 
 	pMMG_DisableCS(pMMG_Obj1);
@@ -342,23 +355,23 @@ void pMMG_ReadUncompValue_multiple_3(pMMG_Obj_t* pMMG_Obj1, pMMG_Obj_t* pMMG_Obj
 	if (temperatureOSR == 0x00) {				// 0.54ms
 //		HAL_Delay(1);
 //		us_Delay(1000);
-		us_Delay(610);
+		us_Delay(600);
 	}
 	else if (temperatureOSR == 0x02) {			// 1.06ms
 //		HAL_Delay(2);
-		us_Delay(2000);
+		us_Delay(1200);
 	}
 	else if (temperatureOSR == 0x04) {			// 2.08ms
 //		HAL_Delay(3);
-		us_Delay(3000);
+		us_Delay(2500);
 	}
 	else if (temperatureOSR == 0x06) {			// 4.13ms
 //		HAL_Delay(5);
-		us_Delay(5000);
+		us_Delay(4500);
 	}
 	else {										// 8.22ms
 //		HAL_Delay(10);
-		us_Delay(10000);
+		us_Delay(9000);
 	}
 
 	pMMG_DisableCS(pMMG_Obj1);
@@ -430,23 +443,23 @@ void pMMG_ReadUncompValue_multiple_2(pMMG_Obj_t* pMMG_Obj1, pMMG_Obj_t* pMMG_Obj
 	if (pressureOSR == 0x00) {				// 0.54ms
 //		HAL_Delay(1);
 //		us_Delay(1000);
-		us_Delay(610);
+		us_Delay(600);
 	}
 	else if (pressureOSR == 0x02) {			// 1.06ms
 //		HAL_Delay(2);
-		us_Delay(2000);
+		us_Delay(1200);
 	}
 	else if (pressureOSR == 0x04) {			// 2.08ms
 //		HAL_Delay(3);
-		us_Delay(3000);
+		us_Delay(2500);
 	}
 	else if (pressureOSR == 0x06) {			// 4.13ms
 //		HAL_Delay(5);
-		us_Delay(5000);
+		us_Delay(4500);
 	}
 	else {									// 8.22ms
 //		HAL_Delay(10);
-		us_Delay(10000);
+		us_Delay(9000);
 	}
 
 	pMMG_DisableCS(pMMG_Obj1);
@@ -483,23 +496,23 @@ void pMMG_ReadUncompValue_multiple_2(pMMG_Obj_t* pMMG_Obj1, pMMG_Obj_t* pMMG_Obj
 	if (temperatureOSR == 0x00) {				// 0.54ms
 //		HAL_Delay(1);
 //		us_Delay(1000);
-		us_Delay(610);
+		us_Delay(600);
 	}
 	else if (temperatureOSR == 0x02) {			// 1.06ms
 //		HAL_Delay(2);
-		us_Delay(2000);
+		us_Delay(1200);
 	}
 	else if (temperatureOSR == 0x04) {			// 2.08ms
 //		HAL_Delay(3);
-		us_Delay(3000);
+		us_Delay(2500);
 	}
 	else if (temperatureOSR == 0x06) {			// 4.13ms
 //		HAL_Delay(5);
-		us_Delay(5000);
+		us_Delay(4500);
 	}
 	else {										// 8.22ms
 //		HAL_Delay(10);
-		us_Delay(10000);
+		us_Delay(9000);
 	}
 
 	pMMG_DisableCS(pMMG_Obj1);

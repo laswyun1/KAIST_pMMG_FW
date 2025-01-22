@@ -32,6 +32,9 @@
 #define READ_ADC_CMD              			0x00
 
 
+
+#define sysMHz 								170
+
 /* Oversampling ratio */
 typedef enum _pMMG_OSR_t {
 	OSR_256  = 0x00,
